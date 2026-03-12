@@ -8,3 +8,5 @@ htmlcov/
 *.so
 *.egg-info/
 .DS_Store
+/text-catcher/data/raw
+/text-plagiarism-dataset
