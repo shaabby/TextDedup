@@ -3,6 +3,7 @@ from textdedup.similarity import SimilarityEngine, pairwise_similarity
 
 def test_pairwise_similarity_identical_texts_high_score() -> None:
     score = pairwise_similarity("机器学习用于文本查重", "机器学习用于文本查重")
+    print(f"pairwise score={score:.6f}")
     assert score > 0.99
 
 
@@ -16,6 +17,7 @@ def test_query_returns_most_similar_text() -> None:
     engine.fit(texts)
 
     result = engine.query("北京天气阳光明媚", top_k=1)[0]
+    print(f"top1 index={result.index}, score={result.score:.6f}, text={result.text}")
     assert result.index in (0, 2)
     assert result.score > 0.2
 
@@ -30,4 +32,5 @@ def test_deduplicate_finds_near_duplicate_pairs() -> None:
     engine.fit(texts)
 
     pairs = engine.deduplicate(threshold=0.6)
+    print(f"duplicate pairs={pairs}")
     assert any((i, j) == (0, 1) for i, j, _ in pairs)

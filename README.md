@@ -1,25 +1,41 @@
 # TextDedup
 
-TextDedup 是一个面向文本查重与相似检索的工程化项目原型。
+TextDedup 是一个面向文本去重与相似检索的工程化原型仓库。
 
-## 本周交付内容
+当前仓库主要包含两个可交付模块：
 
-- 完成基础项目结构初始化
-- 完成 Python 依赖声明（含 Faiss 与 ONNX Runtime）
-- 完成两套相似度原型：
-  - TF-IDF + 余弦相似度
-  - SimHash
-- 提供单元测试验证核心逻辑
+- `src/textdedup`：文本相似度与两阶段检索算法原型
+- `text-catcher`：仅采集（collect-only）的站点递归抓取工具
+
+说明：`text-plagiarism-dataset` 在本地开发时可能作为兄弟目录存在，但不属于当前 Git 仓库交付范围，上传时不包含该目录。
 
 ## 快速开始
 
-1. 创建虚拟环境并激活
-2. 安装依赖
-3. 运行测试
+### 1. TextDedup 算法模块
 
-## 目录结构
+在仓库根目录执行：
 
-- src/textdedup: 核心算法实现
-- tests: 测试用例
-- docs: 技术文档
-- data: 示例数据目录（预留）
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+pytest -q
+```
+
+### 2. text-catcher 采集模块
+
+在仓库根目录执行：
+
+```bash
+cd text-catcher
+pip install -r requirements.txt
+bash scripts/collect.sh
+```
+
+## 目录说明
+
+- `src/textdedup`：`SimilarityEngine`、`SimHash`、`TwoStageSearchEngine`
+- `tests`：相似度与两阶段检索单元测试
+- `docs`：根项目技术设计与交接文档
+- `text-catcher`：配置驱动的递归 HTML 采集工具
+- `data`：根项目预留数据目录
