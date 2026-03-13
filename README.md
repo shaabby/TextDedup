@@ -1,17 +1,17 @@
 # TextDedup
 
-TextDedup 是一个面向文本去重与相似检索的工程化原型仓库。
+TextDedup 是一个面向文本去重与疑似改写识别的两层检索原型仓库。
 
-当前仓库主要包含两个可交付模块：
+当前项目聚焦于以下处理链路：
 
-- `src/textdedup`：文本相似度与两阶段检索算法原型
-- `text-catcher`：仅采集（collect-only）的站点递归抓取工具
+- 第一层：基于指纹的快速去重与候选召回，当前已实现 `SimHash`，后续可扩展 `MinHash`
+- 第二层：基于向量的语义匹配，用于对疑似相似文本做深度判别，目标模型为 `BERT` / `SBERT`
 
-说明：`text-plagiarism-dataset` 在本地开发时可能作为兄弟目录存在，但不属于当前 Git 仓库交付范围，上传时不包含该目录。
+数据采集不再作为本仓库交付内容。后续数据将由外部流程预先准备，并通过配置方式接入本项目。
+
+说明：当前代码中两阶段检索的精排部分仍是 `TF-IDF + cosine similarity` 原型，用于验证接口与流程，后续会替换为向量语义匹配实现。
 
 ## 快速开始
-
-### 1. TextDedup 算法模块
 
 在仓库根目录执行：
 
@@ -22,20 +22,21 @@ pip install -r requirements.txt
 pytest -q
 ```
 
-### 2. text-catcher 采集模块
+## 当前能力
 
-在仓库根目录执行：
+- `SimHash` 指纹生成、汉明距离计算与粗粒度相似度估计
+- `SimilarityEngine`：基于 `TF-IDF + cosine similarity` 的文本相似度原型
+- `TwoStageSearchEngine`：先用 `SimHash` 过滤候选，再做二阶段精排
 
-```bash
-cd text-catcher
-pip install -r requirements.txt
-bash scripts/collect.sh
-```
+## 后续演进方向
+
+- 增加可插拔的一层候选召回策略，支持 `SimHash` / `MinHash`
+- 将二阶段精排从 `TF-IDF` 迁移到向量语义模型，如 `BERT` / `SBERT`
+- 通过统一配置接入离线采集好的文本数据、片段数据或向量索引
 
 ## 目录说明
 
-- `src/textdedup`：`SimilarityEngine`、`SimHash`、`TwoStageSearchEngine`
-- `tests`：相似度与两阶段检索单元测试
-- `docs`：根项目技术设计与交接文档
-- `text-catcher`：配置驱动的递归 HTML 采集工具
-- `data`：根项目预留数据目录
+- `src/textdedup`：文本去重与两阶段检索核心实现
+- `tests`：算法模块单元测试
+- `docs`：技术设计与交接文档
+- `data`：预留的数据与配置接入目录

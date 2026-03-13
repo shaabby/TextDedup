@@ -16,7 +16,7 @@ class TwoStageResult:
 
 
 class TwoStageSearchEngine:
-    """两阶段文本检索: SimHash 粗筛 + TF-IDF 精排。"""
+    """两阶段文本检索: SimHash 粗筛 + 二阶段精排原型。"""
 
     def __init__(self, hash_bits: int = 64) -> None:
         self.simhash = SimHash(hash_bits=hash_bits)
@@ -50,7 +50,7 @@ class TwoStageSearchEngine:
         distances.sort(key=lambda x: x[1])
         candidate_indices = [i for i, _ in distances[:candidate_k]]
 
-        # 仅在候选集合内做 TF-IDF 余弦精排，控制计算开销。
+        # 当前原型仅在候选集合内做 TF-IDF 余弦精排，后续可替换为向量语义模型。
         candidate_texts = [self._texts[i] for i in candidate_indices]
         local_ranker = SimilarityEngine()
         local_ranker.fit(candidate_texts)
