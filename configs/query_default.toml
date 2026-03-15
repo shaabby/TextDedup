@@ -1,0 +1,70 @@
+# query_default.toml — TextDedup 日常查重配置（简化版）
+#
+# 一键运行：
+#   python scripts/query_similar_segments.py --config configs/query_default.toml
+#
+# 规则：CLI 参数优先于配置文件。
+
+# ── 1) 查询输入（常改） ─────────────────────────────────────────────────────
+[query]
+# 二选一：推荐用 file，便于粘贴长文本
+file = "configs/query.txt"
+# text = """在这里直接写查询文本"""
+
+
+# ── 2) 数据库（常改） ───────────────────────────────────────────────────────
+[database]
+dirs = ["data/raw2/clean_shards"]
+file_glob = "*.clean.jsonl"
+file_format = "jsonl"
+text_field = "text"
+id_field = "doc_id"
+
+
+# ── 3) 切片（常改） ─────────────────────────────────────────────────────────
+[chunking]
+mode = "sliding"
+window_sentences = 6
+stride_sentences = 3
+
+# 仅 paragraph / hybrid 模式会用到
+max_chars = 500
+
+
+# ── 4) 检索策略（常改） ─────────────────────────────────────────────────────
+[pipeline]
+# two-stage: TF-IDF + SBERT
+# sbert-only: 纯 SBERT（需向量缓存，否则首次较慢）
+retrieval_mode = "two-stage"
+
+top_k = 5
+
+# 二阶段开关
+enable_tfidf = true
+enable_sbert = true
+
+# 候选规模（性能/召回平衡）
+tfidf_candidate_k = 800
+sbert_top_n = 20
+
+
+# ── 5) 缓存（建议开启） ─────────────────────────────────────────────────────
+[cache]
+# two-stage 的实际缓存内容是“切片文本缓存（chunk-text cache）”
+# 说明：脚本仍兼容历史键名 `reuse_two_stage_cache/two_stage_file/two_stage_meta_file`
+reuse_chunk_text_cache = false
+chunk_text_cache_file = ".cache/query_chunk_text_cache.json"
+chunk_text_cache_meta_file = ".cache/query_chunk_text_cache.meta.json"
+
+reuse_sbert_cache = true
+sbert_embeddings_file = ".cache/query_sbert_embeddings.json"
+sbert_meta_file = ".cache/query_sbert_embeddings.meta.json"
+
+
+# ── 6) 输出与运行时（偶尔改） ───────────────────────────────────────────────
+[output]
+# file = "results/query_result.json"
+
+[runtime]
+progress_interval = 2000
+quiet_progress = false

@@ -1,0 +1,45 @@
+# query_fast.toml — Speed-first preset
+# 用法:
+#   python scripts/query_similar_segments.py --config configs/query_fast.toml
+
+[query]
+file = "configs/query.txt"
+
+[database]
+dirs = ["data/raw2/clean_shards"]
+file_glob = "*.clean.jsonl"
+file_format = "jsonl"
+text_field = "text"
+id_field = "doc_id"
+
+[chunking]
+mode = "sliding"
+window_sentences = 6
+stride_sentences = 3
+max_chars = 500
+
+[pipeline]
+retrieval_mode = "two-stage"
+top_k = 5
+
+enable_tfidf = true
+enable_sbert = false
+
+tfidf_candidate_k = 200
+sbert_top_n = 20
+
+[cache]
+reuse_chunk_text_cache = true
+chunk_text_cache_file = ".cache/query_chunk_text_fast.json"
+chunk_text_cache_meta_file = ".cache/query_chunk_text_fast.meta.json"
+
+reuse_sbert_cache = false
+sbert_embeddings_file = ".cache/query_sbert_fast_embeddings.json"
+sbert_meta_file = ".cache/query_sbert_fast_embeddings.meta.json"
+
+[output]
+# file = "results/query_fast.json"
+
+[runtime]
+progress_interval = 5000
+quiet_progress = false

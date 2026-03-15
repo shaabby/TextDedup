@@ -1,0 +1,45 @@
+# query_recall.toml — Recall-first preset
+# 用法:
+#   python scripts/query_similar_segments.py --config configs/query_recall.toml
+
+[query]
+file = "configs/query.txt"
+
+[database]
+dirs = ["data/raw2/clean_shards"]
+file_glob = "*.clean.jsonl"
+file_format = "jsonl"
+text_field = "text"
+id_field = "doc_id"
+
+[chunking]
+mode = "sliding"
+window_sentences = 6
+stride_sentences = 3
+max_chars = 500
+
+[pipeline]
+retrieval_mode = "two-stage"
+top_k = 10
+
+enable_tfidf = true
+enable_sbert = true
+
+tfidf_candidate_k = 3000
+sbert_top_n = 200
+
+[cache]
+reuse_chunk_text_cache = true
+chunk_text_cache_file = ".cache/query_chunk_text_recall.json"
+chunk_text_cache_meta_file = ".cache/query_chunk_text_recall.meta.json"
+
+reuse_sbert_cache = true
+sbert_embeddings_file = ".cache/query_sbert_recall_embeddings.json"
+sbert_meta_file = ".cache/query_sbert_recall_embeddings.meta.json"
+
+[output]
+# file = "results/query_recall.json"
+
+[runtime]
+progress_interval = 2000
+quiet_progress = false

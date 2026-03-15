@@ -1,0 +1,5 @@
+{
+  "terminal.integrated.defaultLocation": "panel",
+  "workbench.panel.defaultLocation": "bottom",
+  "workbench.panel.alignment": "justify"
+}

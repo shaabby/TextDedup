@@ -1,6 +1,7 @@
 __pycache__/
 *.pyc
 .venv/
+.cache/
 .pytest_cache/
 .mypy_cache/
 .coverage
@@ -11,3 +12,7 @@ htmlcov/
 /text-catcher/data/raw
 # Local sibling dataset project is not part of this repository.
 /text-plagiarism-dataset
+/data
+/*.json
+/*.jsonl
+/models

@@ -1,108 +1,118 @@
 # TextDedup 技术文档
 
-## 1. 文档范围
+## 1. 目标与范围
 
-本文仅覆盖当前 Git 仓库中的文本去重模块，不包含任何数据采集实现。
+TextDedup 聚焦离线文本检索与改写识别，不负责数据采集。
 
-仓库职责限定为：
+当前目标：
 
-- 基于文本指纹的快速去重与候选召回
-- 基于向量语义的二阶段复核架构
-- 面向离线数据的配置接入能力
+- 以可解释、可复现、可缓存的方式完成离线检索
+- 在保证召回的同时控制算力成本
+- 提供可配置的两种检索模式
 
 ## 2. 总体架构
 
-目标链路分为两层：
+### 2.1 two-stage（默认）
 
-### 2.1 第一层：指纹快速过滤
+`TF-IDF -> (optional) SBERT`
 
-目标：快速排除明显无关文本，降低二阶段计算成本。
+- Stage 1（TF-IDF）
+  - 在全量切片语料上建词特征空间
+  - 用 `tfidf_candidate_k` 控制候选规模
+- Stage 2（SBERT，可选）
+  - 对 TF-IDF 候选做语义重排
+  - 用 `sbert_top_n` 控制进入终排的候选数
 
-候选方案：
+### 2.2 sbert-only（可选）
 
-- 已实现：`SimHash`
-- 规划扩展：`MinHash`
+- 直接对全量切片做向量检索
+- 强依赖向量缓存，否则首次编码开销较大
 
-这一层关注的是召回效率与近重复过滤，不追求精细语义理解。
+## 3. 关键模块
 
-### 2.2 第二层：向量语义匹配
+- `similarity.py`
+  - `SimilarityEngine`
+  - 负责 TF-IDF fit/query
+- `sbert_similarity.py`
+  - `SbertSimilarityEngine`
+  - 负责向量编码与相似度检索
+- `two_stage.py`
+  - `TwoStageSearchEngine`
+  - 负责二阶段编排与打分输出
+- `chunking.py`
+  - 文本切片（paragraph/sliding/hybrid）
+- `scripts/query_similar_segments.py`
+  - 统一 CLI、配置解析、缓存调度、进度输出
 
-目标：对第一层保留下来的疑似相似文本进行深度语义分析，识别改写、重组、近义替换等情况。
+## 4. 配置模型
 
-目标模型：
+核心字段：
 
-- `BERT`
-- `SBERT`
+- `[pipeline]`
+  - `retrieval_mode`
+  - `enable_tfidf`
+  - `enable_sbert`
+  - `tfidf_candidate_k`
+  - `sbert_top_n`
+- `[chunking]`
+  - `mode`
+  - `window_sentences`
+  - `stride_sentences`
+- `[cache]`
+  - `reuse_chunk_text_cache`
+  - `reuse_sbert_cache`
 
-当前状态：代码里二阶段精排仍为 `TF-IDF + cosine similarity` 原型，用于验证接口和流程，后续会替换为真正的句向量语义匹配。
+约束：
 
-## 3. 核心算法说明
+- `two-stage` 模式必须启用 TF-IDF
+- `sbert-only` 模式下强制启用 SBERT
 
-### 3.1 SimHash
+## 5. 缓存设计
 
-- 对 token 哈希后按权重累加
-- 对各维符号取值生成定长指纹，默认 64 bit
-- 通过汉明距离估计文本接近程度：
+### 5.1 two-stage 缓存
 
-$$
-sim = 1 - \frac{d_H(fp_A, fp_B)}{n}
-$$
+- 缓存对象：切片文本与元信息
+- 目标：跳过重复的读文件与切片过程
 
-适用场景：
+### 5.2 sbert-only 缓存
 
-- 近重复文本过滤
-- 候选集快速缩减
-- 大规模文本集合初筛
+- 缓存对象：embeddings
+- 目标：跳过重复全量编码
 
-### 3.2 当前二阶段原型
+### 5.3 失效策略
 
-- 将文本映射为 TF-IDF 向量
-- 使用余弦相似度进行候选排序：
+签名包含：
 
-$$
-sim(A, B) = \frac{A \cdot B}{\|A\|\|B\|}
-$$
+- 输入文件路径/大小/mtime
+- 文本字段映射
+- 切片参数
+- 模型关键配置
 
-这一实现的价值在于先把“两阶段接口”跑通，但它不等同于最终目标中的语义匹配层。
+签名不一致则自动重建。
 
-### 3.3 目标二阶段语义层
+## 6. 性能与调参
 
-后续替换方向：
+### 6.1 默认参数（当前语料）
 
-- 使用 `BERT` / `SBERT` 将文本或片段编码为向量
-- 通过向量相似度完成候选复核与排序
-- 在需要时接入向量索引以支撑更大规模检索
+- `chunk_mode=sliding`
+- `window_sentences=6`
+- `stride_sentences=3`
+- `tfidf_candidate_k=800`
+- `sbert_top_n=20`
 
-## 4. 数据接入设计
+### 6.2 调参建议
 
-数据将由仓库外部预先采集和清洗，本仓库只负责消费。
+- 速度优先：降低 `tfidf_candidate_k` / 关闭 `enable_sbert`
+- 召回优先：增大 `tfidf_candidate_k` / 增大 `sbert_top_n`
+- 改写较重：优先 `sbert-only` + 缓存
 
-建议的配置接入信息包括：
+## 7. 已弃用说明
 
-- 数据文件路径
-- 文本字段名
-- 主键字段名
-- 分片或片段字段名
-- 指纹层参数，例如 `hash_bits`、阈值、候选数
-- 语义层参数，例如模型名、批大小、相似度阈值
+- SimHash 已从主查询链路移除，不再作为候选接口。
+- 仓库中的 `simhash.py` 与 `cpp_bridge.py` 当前仅作为独立实验能力保留。
 
-推荐数据流：
+## 8. 后续演进
 
-1. 外部流程准备原始文本或分段文本。
-2. 通过配置加载到本仓库的数据接口。
-3. 第一层完成快速去重或候选召回。
-4. 第二层完成语义复核与最终判定。
-
-## 5. 依赖说明
-
-- `numpy`：基础数值计算
-- `scikit-learn`：当前 `TF-IDF` 原型实现
-- `pytest`：测试框架
-
-向量模型、模型推理框架和向量索引库将在二阶段语义能力实际落地时再引入，避免仓库长期携带未使用依赖。
-
-## 6. 后续迭代建议
-
-1. 抽象第一层候选召回接口，支持 `SimHash` 与 `MinHash` 可插拔切换。
-2. 引入配置驱动的数据加载器，统一对接已采集好的文本数据。
-3. 用 `BERT` / `SBERT` 替换当前 `TF-IDF` 二阶段原型，并补充离线评测指标。
+1. 引入批量评测入口与指标汇总（Recall@K、MRR、耗时）。
+2. 支持分语料模板自动选参。
+3. 引入向量索引（如 FAISS）以降低 sbert-only 大库检索成本。

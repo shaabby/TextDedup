@@ -1,0 +1,47 @@
+# query_sbert_only.toml — SBERT-only preset (cache-first)
+# 用法:
+#   python scripts/query_similar_segments.py --config configs/query_sbert_only.toml
+
+[query]
+file = "configs/query.txt"
+
+[database]
+dirs = ["data/raw2/clean_shards"]
+file_glob = "*.clean.jsonl"
+file_format = "jsonl"
+text_field = "text"
+id_field = "doc_id"
+
+[chunking]
+mode = "sliding"
+window_sentences = 6
+stride_sentences = 3
+max_chars = 500
+
+[pipeline]
+retrieval_mode = "sbert-only"
+top_k = 10
+
+enable_tfidf = false
+enable_sbert = true
+
+# sbert-only 下 tfidf_candidate_k 不参与计算，保留仅为兼容
+tfidf_candidate_k = 1000
+sbert_top_n = 200
+
+[cache]
+# chunk-text 缓存在本预设下不会使用
+reuse_chunk_text_cache = false
+chunk_text_cache_file = ".cache/query_chunk_text_sbert_only_unused.json"
+chunk_text_cache_meta_file = ".cache/query_chunk_text_sbert_only_unused.meta.json"
+
+reuse_sbert_cache = true
+sbert_embeddings_file = ".cache/query_sbert_only_embeddings.json"
+sbert_meta_file = ".cache/query_sbert_only_embeddings.meta.json"
+
+[output]
+# file = "results/query_sbert_only.json"
+
+[runtime]
+progress_interval = 2000
+quiet_progress = false
